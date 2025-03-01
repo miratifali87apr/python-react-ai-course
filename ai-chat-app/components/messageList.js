@@ -1,8 +1,8 @@
 import styles from "./messageList.module.css";
+import React, { useState } from "react";
 
 const MessageList = () => {
-
-  const chatHistory = [
+  const chats = [
     {
         sender: "user",
         message: "Describe the Lacy dog breed"
@@ -21,6 +21,17 @@ const MessageList = () => {
     },
   ];
 
+  const [userMessage, setUserMessage] = useState("");
+  const [chatHistory, setChatHistory] = useState(chats);
+
+  const sendMessage = async () => {
+    setChatHistory((prev) => [
+      ...prev,
+      { sender: "user", message: userMessage },
+      { sender: "bot", message: "This is a dummy bot message"},
+    ]);
+  };
+
   return (
     <div className={styles.container}>
       <h1 className={styles.header}>Chat with GPT</h1>
@@ -38,9 +49,11 @@ const MessageList = () => {
         <input 
             type="text"
             placeholder="Type a message..."
+            value = {userMessage}
+            onChange = {(e) => setUserMessage(e.target.value)}
             className={styles.input}
         />
-        <button className={styles.button}>
+        <button onClick = {sendMessage} className={styles.button}>
             Send
         </button>
       </div>

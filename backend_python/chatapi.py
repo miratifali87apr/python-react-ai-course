@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 my_api_key = os.getenv("OPENAI_API_KEY")
@@ -17,6 +18,14 @@ class ChatResponse(BaseModel):
 
 app = FastAPI()
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins; restrict in production
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all HTTP methods
+    allow_headers=["*"],  # Allows all HTTP headers
+)
 
 @app.post("/")
 def ai_prompt(request: ChatRequest):
