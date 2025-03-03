@@ -2,34 +2,42 @@ import styles from "./messageList.module.css";
 import React, { useState } from "react";
 
 const MessageList = () => {
-  const chats = [
-    {
-        sender: "user",
-        message: "Describe the Lacy dog breed"
-    },
-    {
-        sender: "bot",
-        message: "The Lacy Dog or Blue Lacy Dog is a breed of working dog that originated in the U.S. state of Texas in the mid-19th century."
-    },
-    {
-        sender: "user",
-        message: "Describe the Beagle dog breed"
-    },
-    {
-        sender: "bot",
-        message: "The beagle is a breed of small scent hound, similar in appearance to the much larger foxhound. The beagle was developed primarily for hunting rabbit or hare, known as beagling."
-    },
-  ];
-
   const [userMessage, setUserMessage] = useState("");
-  const [chatHistory, setChatHistory] = useState(chats);
+  const [chatHistory, setChatHistory] = useState([]);
 
   const sendMessage = async () => {
-    setChatHistory((prev) => [
-      ...prev,
-      { sender: "user", message: userMessage },
-      { sender: "bot", message: "This is a dummy bot message"},
-    ]);
+    if (!userMessage.trim()) return;
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: userMessage,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get response from the server");
+      }
+
+      const data = await response.json();
+      setChatHistory((prev) => [
+        ...prev,
+        { sender: "user", message: userMessage },
+        { sender: "bot", message: data.response},
+      ]);
+  
+      setUserMessage("");
+
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Failed to send message. Please try again.");
+    }
+
+    
   };
 
   return (
