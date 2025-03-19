@@ -4,19 +4,24 @@ import React, { useState } from "react";
 const MessageList = () => {
   const [userMessage, setUserMessage] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
 
   const sendMessage = async () => {
     if (!userMessage.trim()) return;
+    setLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/", {
+      const formData = new FormData();
+      formData.append("prompt", userMessage);
+
+      if (imageFile) {
+        formData.append("file", imageFile);
+      }
+
+      const response = await fetch("http://127.0.0.1:8000/uploadfile/", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt: userMessage,
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -24,20 +29,39 @@ const MessageList = () => {
       }
 
       const data = await response.json();
-      setChatHistory((prev) => [
-        ...prev,
-        { sender: "user", message: userMessage },
-        { sender: "bot", message: data.response},
-      ]);
+
+      if (imageFile) {
+        setChatHistory((prev) => [
+          ...prev,
+          { sender: "user", message: userMessage, isImage: false },
+          { sender: "user", message: imageFile, isImage: true},
+          { sender: "bot", message: data.response, isImage: false },
+        ]);
+      }
+      else {
+        setChatHistory((prev) => [
+          ...prev,
+          { sender: "user", message: userMessage, isImage: false },
+          { sender: "bot", message: data.response, isImage: false },
+        ]);
+      }
   
       setUserMessage("");
+      setImageFile(null);
 
     } catch (error) {
       console.error("Error:", error);
       alert("Failed to send message. Please try again.");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+    }
   };
 
   return (
@@ -47,9 +71,18 @@ const MessageList = () => {
         {chatHistory.map((chat, index) => (
             <div 
                 key={index}
-                className={`${styles.message} ${chat.sender == "user" ? styles.userMessage : styles.botMessage}`}
+                className={`${styles.message} ${chat && chat.sender == "user" ? styles.userMessage : styles.botMessage}`}
             >
-                {chat.message}
+              {chat.isImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img 
+                    src={URL.createObjectURL(chat.message)}
+                    alt="Uploaded"
+                    className={styles.image}
+                />
+              ) : (
+                chat.message
+              )}
             </div>
         ))}
       </div>
@@ -60,9 +93,20 @@ const MessageList = () => {
             value = {userMessage}
             onChange = {(e) => setUserMessage(e.target.value)}
             className={styles.input}
+            disabled = {loading}
         />
-        <button onClick = {sendMessage} className={styles.button}>
-            Send
+        <label htmlFor="image-upload" className={styles.paperclipButton}>
+            📎
+        </label>
+        <input
+            id = "image-upload"
+            type = "file"
+            accept = "image/*"
+            className = {styles.inputImage}
+            onChange = {handleImageUpload}
+        />
+        <button onClick = {sendMessage} className={styles.button} disabled={loading}>
+            {loading ? "Sending..." : "Send"}
         </button>
       </div>
     </div>
