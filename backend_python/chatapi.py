@@ -1,9 +1,10 @@
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, File, Form, UploadFile
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+import base64
 
 load_dotenv()
 my_api_key = os.getenv("OPENAI_API_KEY")
@@ -45,3 +46,49 @@ def ai_prompt(request: ChatRequest):
     gpt_response = completion.choices[0].message.content
     return ChatResponse(response = gpt_response)
 
+@app.post("/uploadfile/")
+async def create_upload_file(
+    prompt: str = Form(...),
+    file: UploadFile = File(None)
+):
+    base64_image = None
+    completion = None
+    if file:
+        contents = await file.read()
+        base64_image = base64.b64encode(contents).decode("utf-8")
+
+        completion = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        { "type": "text", "text": prompt },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}",
+                            },
+                        },
+                    ],
+                }
+            ],
+        )
+    else:
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system", 
+                    "content": "You are a helpful assistant."},
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+
+    if (completion):
+        gpt_response = completion.choices[0].message.content
+        return ChatResponse(response = gpt_response)
+    return {"message": "No response"}
